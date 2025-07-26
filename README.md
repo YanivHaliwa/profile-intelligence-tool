@@ -17,6 +17,12 @@
 ## Overview
 A comprehensive LinkedIn profile analysis web application that reveals profile data, performs AI-powered professional assessments, and presents insights through a modern Flask-based interface with soft blue styling.
 
+## 🎥 Demo Video
+
+https://github.com/YanivHaliwa/profile-intelligence-tool/assets/demo.mp4
+
+*Watch the full demo showing the complete analysis workflow, from profile input to AI-powered insights with Template 2 styling.*
+
 ## 🌐 Main Application - `main.py`
 **Flask Web Server** - The core application providing the web interface and orchestrating the analysis pipeline.
 
