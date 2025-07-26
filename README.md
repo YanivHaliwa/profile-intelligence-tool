@@ -18,10 +18,11 @@
 A comprehensive LinkedIn profile analysis web application that reveals profile data, performs AI-powered professional assessments, and presents insights through a modern Flask-based interface with soft blue styling.
 
 ## 🎥 Demo Video
- 
+
+in example video below, i gonna show test analyze on my linkedin name.
 https://github.com/user-attachments/assets/6a03e81f-ee10-4558-9307-a09fb6b9ad06
 
-*Watch the full demo showing the complete analysis workflow, from profile input to AI-powered insights with Template 2 styling.*
+*Watch the full demo showing the complete analysis workflow, from profile input to AI-powered insights.*
 
 
 ## 🌐 Main Application - `main.py`
