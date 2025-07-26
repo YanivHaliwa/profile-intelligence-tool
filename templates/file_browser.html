@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Profile Data - LinkedIn Analyzer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0077b5 0%, #005885 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .files-container {
+            padding: 2rem;
+        }
+
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .file-card {
+            border: 2px solid #e1e8ed;
+            border-radius: 15px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #fafbfc;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-card:hover {
+            border-color: #0077b5;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,119,181,0.15);
+            background: white;
+        }
+
+        .file-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #0077b5, #005885);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .file-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .file-icon {
+            font-size: 2.5rem;
+            color: #0077b5;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .file-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .file-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .no-files {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+
+        .no-files i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            display: block;
+            color: #dee2e6;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #6c757d;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+
+        .back-button:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .files-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                margin: 1rem;
+                border-radius: 15px;
+            }
+            
+            .header {
+                padding: 1.5rem;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-folder-open"></i> Select Profile Data</h1>
+            <p>Choose a LinkedIn profile to view</p>
+        </div>
+
+        <div class="files-container">
+            <a href="/" class="back-button">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+
+            {% if files %}
+            <div class="files-grid">
+                {% for file in files %}
+                <div class="file-card" onclick="location.href='/load/{{ file.filename }}'">
+                    <i class="fas fa-user-circle file-icon"></i>
+                    <div class="file-name">{{ file.display_name }}</div>
+                    <div class="file-meta">
+                        <span><i class="fas fa-clock"></i> {{ file.modified }}</span>
+                        <span><i class="fas fa-database"></i> {{ file.size }}</span>
+                        <span><i class="fas fa-file-code"></i> {{ file.filename }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="no-files">
+                <i class="fas fa-folder-open"></i>
+                <h2>No Profile Data Found</h2>
+                <p>No JSON files found in the current directory.<br>Please analyze a LinkedIn profile first.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                window.location.href = '/';
+            }
+        });
+
+        // Add loading indicator for file selection
+        document.querySelectorAll('.file-card').forEach(card => {
+            card.addEventListener('click', function() {
+                this.style.opacity = '0.7';
+                this.style.transform = 'scale(0.98)';
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyzer</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .logo {
+            font-size: 3rem;
+            color: #0077b5;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-prefix {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #7f8c8d;
+            font-weight: 500;
+            z-index: 2;
+        }
+
+        #username {
+            width: 100%;
+            padding: 1rem 1rem 1rem 12rem;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+
+        #username:focus {
+            outline: none;
+            border-color: #0077b5;
+            box-shadow: 0 0 0 3px rgba(0, 119, 181, 0.1);
+        }
+
+        .linkedin-url {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 0.8rem;
+            margin-bottom: 1.5rem;
+            font-family: 'Courier New', monospace;
+            color: #0077b5;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+
+        .search-btn {
+            background: linear-gradient(45deg, #0077b5, #005582);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 119, 181, 0.3);
+        }
+
+        .search-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 1.5rem;
+        }
+
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            background: linear-gradient(45deg, #0077b5, #005582);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .error {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border-left: 4px solid #d63031;
+        }
+
+        .success {
+            background: #e8f5e8;
+            color: #27ae60;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border-left: 4px solid #27ae60;
+        }
+
+        .spinner {
+            display: none;
+            margin: 0 auto 1rem;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0077b5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .test-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.3);
+        }
+
+        .divider {
+            margin: 1rem 0;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .features {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .feature {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.8rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .feature i {
+            margin-right: 0.5rem;
+            color: #0077b5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <i class="fab fa-linkedin"></i>
+        </div>
+        <h1>Profile Analyzer</h1>
+        <p class="subtitle">Extract comprehensive LinkedIn profile data</p>
+        
+        <form id="analyzeForm">
+            <div class="input-group">
+                <div class="input-prefix">linkedin.com/in/</div>
+                <input type="text" id="username" name="username" placeholder="username" required>
+            </div>
+            
+            <div class="linkedin-url" id="linkedinUrl">
+                https://linkedin.com/in/username
+            </div>
+            
+            <button type="submit" class="search-btn" id="searchBtn">
+                <i class="fas fa-search"></i> Run Profile Checkup
+            </button>
+        </form>
+        
+        <div class="divider">OR</div>
+        
+        <a href="/test" class="test-btn">
+            <i class="fas fa-folder-open"></i> Check Profile with Existing Data
+        </a>
+        
+        <div class="spinner" id="spinner"></div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Initializing...</div>
+        </div>
+        
+        <div id="messageContainer"></div>
+        
+        <div class="features">
+            <div class="feature">
+                <i class="fas fa-user"></i>
+                Extract personal information & headline
+            </div>
+            <div class="feature">
+                <i class="fas fa-briefcase"></i>
+                Work experience & education
+            </div>
+            <div class="feature">
+                <i class="fas fa-certificate"></i>
+                Certifications & projects
+            </div>
+            <div class="feature">
+                <i class="fas fa-chart-line"></i>
+                Recent activity & engagement
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const usernameInput = document.getElementById('username');
+        const linkedinUrl = document.getElementById('linkedinUrl');
+        const analyzeForm = document.getElementById('analyzeForm');
+        const searchBtn = document.getElementById('searchBtn');
+        const spinner = document.getElementById('spinner');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const messageContainer = document.getElementById('messageContainer');
+
+        // Update LinkedIn URL preview as user types
+        usernameInput.addEventListener('input', function() {
+            const username = this.value.trim();
+            if (username) {
+                linkedinUrl.textContent = `https://linkedin.com/in/${username}`;
+            } else {
+                linkedinUrl.textContent = 'https://linkedin.com/in/username';
+            }
+        });
+
+        // Handle form submission
+        analyzeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = usernameInput.value.trim();
+            if (!username) {
+                showMessage('Please enter a username', 'error');
+                return;
+            }
+
+            startAnalyzing(username);
+        });
+
+        function startAnalyzing(username) {
+            // Show loading state
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+            spinner.style.display = 'block';
+            progressContainer.style.display = 'block';
+            messageContainer.innerHTML = '';
+
+            // Start analyzing
+            fetch('/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `username=${encodeURIComponent(username)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(`Started analyzing: ${data.linkedin_url}`, 'success');
+                    pollStatus(username);
+                } else {
+                    throw new Error(data.error || 'Failed to start analysis');
+                }
+            })
+            .catch(error => {
+                showMessage(`Error: ${error.message}`, 'error');
+                resetForm();
+            });
+        }
+
+        function pollStatus(username) {
+            const pollInterval = setInterval(() => {
+                fetch(`/status/${username}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateProgress(data.progress || 0, data.message || 'Processing...');
+                    
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        showMessage('Profile analyzed successfully!', 'success');
+                        setTimeout(() => {
+                            window.location.href = `/results/${username}`;
+                        }, 1500);
+                    } else if (data.status === 'error') {
+                        clearInterval(pollInterval);
+                        showMessage(`Error: ${data.message}`, 'error');
+                        resetForm();
+                    }
+                })
+                .catch(error => {
+                    clearInterval(pollInterval);
+                    showMessage(`Error checking status: ${error.message}`, 'error');
+                    resetForm();
+                });
+            }, 2000);
+        }
+
+        function updateProgress(percent, message) {
+            progressFill.style.width = `${percent}%`;
+            progressText.textContent = message;
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            messageContainer.innerHTML = '';
+            messageContainer.appendChild(messageDiv);
+        }
+
+        function resetForm() {
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Profile';
+            spinner.style.display = 'none';
+            progressContainer.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

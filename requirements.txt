@@ -1,0 +1,5 @@
+flask
+openai
+selenium
+beautifulsoup4
+requests
