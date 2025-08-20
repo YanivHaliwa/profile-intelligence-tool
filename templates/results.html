@@ -242,110 +242,16 @@
             color: #2c5282;
         }
 
-        /* Template 2 Exact Styling */
-        .headline {
-            background: #4a90a4;
-            padding: 1.5rem;
-            text-align: center;
-            color: white;
-            font-size: 1.2rem;
-            font-weight: 500;
-        }
-        
-        .section-group-title {
-            background: #e1ecf4;
-            padding: 1rem;
-            text-align: center;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #2c5282;
-            margin: 1rem 0 0.5rem 0;
-        }
-        
-        .section {
-            margin: 0.5rem;
-            border-radius: 6px;
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-        }
-        
-        .summary-section {
-            background: #f7fafc;
-            border-left: 3px solid #81c3d7;
-        }
-        
-        .details-section {
-            background: #edf2f7;
-            border-left: 3px solid #63b3ed;
-        }
-        
-        .section-title {
-            background: rgba(74, 144, 164, 0.1);
-            padding: 0.8rem 1rem;
-            font-weight: 600;
-            color: #2d3748;
-            font-size: 0.95rem;
-        }
-        
-        .section-content {
-            padding: 1rem;
-            color: #4a5568;
-            line-height: 1.6;
-        }
-
-        /* Legacy support for other sections */
-        .section-box {
-            margin: 0.75rem 0;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #e2e8f0;
-            background: #ffffff;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .section-header {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #2d3748;
-            margin: 0;
-            padding: 1rem 1.25rem;
-            background: linear-gradient(135deg, #f8fbff 0%, #e8f3ff 100%);
-            border-bottom: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .overall-score {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-
-        .score-breakdown {
-            margin-top: 15px;
-        }
-
-        .score-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding: 12px;
-            margin: 8px 0;
-            background: #ffffff;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Legacy analysis section support */
         .analysis-section {
             margin: 0.5rem;
             border-radius: 6px;
             overflow: hidden;
             border: 1px solid #e2e8f0;
+        }
+
+        .summary-section {
+            background: #f7fafc;
+            border-left: 3px solid #81c3d7;
         }
 
         .activity-section {
@@ -356,6 +262,24 @@
         .default-section {
             background: #edf2f7;
             border-left: 3px solid #63b3ed;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.8rem 1rem;
+            background: rgba(74, 144, 164, 0.1);
+        }
+
+        .section-content {
+            color: #4a5568;
+            line-height: 1.6;
+            padding: 1rem;
         }
 
         /* Main Content */
@@ -1071,7 +995,7 @@
             const popupBody = document.getElementById('popupBody');
             
             // If analysis is already HTML formatted (from new format_analysis_for_html function)
-            if (analysis.includes('<div class="section-box">') || analysis.includes('<div class="section ') || analysis.includes('<div class="analysis-headline">') || analysis.includes('<div class="analysis-section">')) {
+            if (analysis.includes('<div class="analysis-headline">') || analysis.includes('<div class="analysis-section">')) {
                 popupBody.innerHTML = `<div class="analysis-content">${analysis}</div>`;
                 return;
             }
