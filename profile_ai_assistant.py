@@ -3,10 +3,35 @@ import json
 import argparse
 import sys
 import os
+import requests
 from openai import OpenAI
 #version 26.7.25
 
 DEBUG = False
+CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'model_config.json')
+
+
+def load_model_config():
+    """Load model configuration from model_config.json"""
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+
+        if DEBUG:
+            print(f"Loaded config: active_provider={config.get('active_provider')}")
+
+        return config
+    except FileNotFoundError:
+        print(f"Warning: {CONFIG_FILE} not found, using OpenAI defaults")
+        return {
+            "active_provider": "openai",
+            "providers": {
+                "openai": {"enabled": True, "model": "gpt-4o", "api_key_env": "OPENAI_API_KEY"}
+            }
+        }
+    except json.JSONDecodeError as e:
+        print(f"Error parsing {CONFIG_FILE}: {e}")
+        sys.exit(1)
 
 def load_profile_data(json_file):
     """Load and validate LinkedIn profile JSON data"""
@@ -191,9 +216,9 @@ Location: {location}
     
     return formatted_text
 
-def analyze_with_chatgpt(profile_text, api_key):
-    """Send profile data to ChatGPTfor analysis"""
-    
+def analyze_with_chatgpt(profile_text, api_key, model='gpt-4o'):
+    """Send profile data to ChatGPT for analysis"""
+
     try:
         # Initialize OpenAI client
         client = OpenAI(api_key=api_key)
@@ -244,7 +269,7 @@ Please structure your response clearly with the 11 sections mentioned in the sys
         
         # Make API call
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -268,11 +293,136 @@ Please structure your response clearly with the 11 sections mentioned in the sys
         print("3. Check your internet connection")
         sys.exit(1)
 
-def get_api_key():
+
+def analyze_with_ollama(profile_text, model, base_url):
+    """Send profile data to Ollama for local analysis"""
+
+    # Same prompts as ChatGPT for consistency
+    system_prompt = """You are a professional LinkedIn profile analyzer and career consultant.
+Analyze the provided LinkedIn profile data and provide a comprehensive, professional summary in this EXACT order:
+
+0. HEADLINE: One compelling, short line (max 10-12 words) that best defines this person - could be a professional tagline, a poetic sentence, or a catchy phrase that captures their essence and expertise
+
+1. OVERALL RATING: Provide a comprehensive professional score out of 100 and detailed evaluation. Format it as:
+   📊 OVERALL PROFESSIONAL RATING: [Score]/100
+
+   Then provide a detailed breakdown explaining the score based on these 6 criteria with weighted importance:
+   *  Professional experience depth and relevance: [Score]/25 (Most Important)
+   *  Skills diversity and market demand: [Score]/20 (Very Important)
+   *  Profile completeness and presentation quality: [Score]/15 (Important)
+   *  Activity and thought leadership presence: [Score]/15 (Important)
+   *  Education and certifications value: [Score]/15 (Important)
+   *  Career trajectory and growth potential: [Score]/10 (Moderately Important)
+
+   Calculate the total score by adding all 6 sections (Total: 100 points). Include specific strengths that contributed to the score and areas for improvement.
+
+== SUMMARY ==
+2. PROFESSIONAL SUMMARY: A 2-3 sentence overview of the person's career focus and expertise
+3. KEY STRENGTHS: Top 3-4 professional strengths based on experience and skills
+4. CAREER TRAJECTORY: Analysis of their career progression and growth
+5. CAREER RECOMMENDATIONS: 2-3 actionable recommendations for career advancement
+
+== DETAILS ==
+6. ACTIVITY & THOUGHT LEADERSHIP: Analyze their LinkedIn posts and activity level in detail
+7. SKILLS ASSESSMENT: Evaluation of their technical and professional skills
+8. PROJECTS HIGHLIGHTS: Most impressive or relevant projects (if any)
+9. CERTIFICATIONS VALUE: Assessment of their certifications and professional development
+10. EDUCATION BACKGROUND: Analysis of their educational qualifications
+
+Please provide a structured, professional analysis."""
+
+    user_prompt = f"""Please analyze this LinkedIn profile data and provide a comprehensive professional summary:
+
+{profile_text}
+
+Please structure your response clearly with the 11 sections mentioned, starting with a compelling HEADLINE, then the OVERALL RATING section with detailed score breakdown."""
+
+    try:
+        if DEBUG:
+            print(f"Sending request to Ollama at {base_url} using model {model}...")
+            print(f"Profile text length: {len(profile_text)} characters")
+
+        # Ollama API endpoint
+        url = f"{base_url}/api/chat"
+
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "stream": False
+        }
+
+        response = requests.post(url, json=payload, timeout=300)
+        response.raise_for_status()
+
+        result = response.json()
+        analysis = result.get('message', {}).get('content', '')
+
+        if not analysis:
+            print("Error: Empty response from Ollama")
+            sys.exit(1)
+
+        if DEBUG:
+            print(f"Received response: {len(analysis)} characters")
+
+        return analysis
+
+    except requests.exceptions.ConnectionError:
+        print(f"Error: Cannot connect to Ollama at {base_url}")
+        print("\nPossible solutions:")
+        print("1. Make sure Ollama is running: ollama serve")
+        print("2. Check if the model is installed: ollama list")
+        print(f"3. Pull the model if needed: ollama pull {model}")
+        sys.exit(1)
+    except requests.exceptions.Timeout:
+        print("Error: Ollama request timed out (>5 minutes)")
+        print("Try a smaller/faster model or check system resources")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error calling Ollama API: {e}")
+        sys.exit(1)
+
+
+def analyze_profile(profile_text, config):
+    """Analyze profile using the configured AI provider"""
+    active = config.get('active_provider', 'openai')
+    providers = config.get('providers', {})
+
+    provider_config = providers.get(active)
+    if not provider_config:
+        print(f"Error: Provider '{active}' not found in config")
+        sys.exit(1)
+
+    if not provider_config.get('enabled', False):
+        print(f"Error: Provider '{active}' is disabled in config")
+        print("Edit model_config.json to enable it")
+        sys.exit(1)
+
+    model = provider_config.get('model', '')
+
+    if active == 'openai':
+        api_key = get_api_key(provider_config.get('api_key_env', 'OPENAI_API_KEY'))
+        print(f"🤖 Analyzing profile with OpenAI ({model})...")
+        return analyze_with_chatgpt(profile_text, api_key, model)
+
+    elif active == 'ollama':
+        base_url = provider_config.get('base_url', 'http://localhost:11434')
+        print(f"🤖 Analyzing profile with Ollama ({model})...")
+        return analyze_with_ollama(profile_text, model, base_url)
+
+    else:
+        print(f"Error: Unknown provider '{active}'")
+        print("Supported providers: openai, ollama")
+        sys.exit(1)
+
+
+def get_api_key(env_var='OPENAI_API_KEY'):
     """Get OpenAI API key from environment variable or user input"""
-    
+
     # Try environment variable first
-    api_key = os.getenv('OPENAI_API_KEY')
+    api_key = os.getenv(env_var)
     
     if api_key:
         if DEBUG:
@@ -472,12 +622,20 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python3 profile_analyzer.py yaniv-haliwa.json
-  python3 profile_analyzer.py adrianzoren.json --output analysis.txt
-  python3 profile_analyzer.py profile.json --debug
+  python3 profile_ai_assistant.py yaniv-haliwa.json
+  python3 profile_ai_assistant.py profile.json --output analysis.txt
+  python3 profile_ai_assistant.py profile.json --debug
+
+Configuration:
+  Edit model_config.json to choose AI provider (openai or ollama)
 
 Environment Variables:
-  OPENAI_API_KEY: Your OpenAI API key (recommended)
+  OPENAI_API_KEY: Required when using OpenAI provider
+
+Ollama Setup (local AI):
+  1. Install Ollama: https://ollama.ai
+  2. Pull a model: ollama pull llama3.2
+  3. Set active_provider to "ollama" in model_config.json
         """
     )
     
@@ -508,13 +666,12 @@ Environment Variables:
     
     if DEBUG:
         print(f"Formatted profile length: {len(formatted_profile)} characters")
-    
-    # Get API key
-    api_key = get_api_key()
-    
-    # Analyze with ChatGPT
-    print("🤖 Analyzing profile with ChatGPT...")
-    analysis = analyze_with_chatgpt(formatted_profile, api_key)
+
+    # Load model configuration
+    config = load_model_config()
+
+    # Analyze with configured AI provider
+    analysis = analyze_profile(formatted_profile, config)
     
     # Determine output file
     if args.output:

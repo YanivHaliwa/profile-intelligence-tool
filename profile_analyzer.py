@@ -25,10 +25,6 @@ DEBUG = False
 
 def get_default_browser():
     """Detect user's default browser with exact version and variant"""
-    import subprocess
-    import os
-    import re
-    
     browser_info = {'type': None, 'variant': None, 'executable': None, 'version': None}
     
     try:
@@ -174,9 +170,6 @@ def get_default_browser():
 
 def find_browser_profile(browser_info):
     """Find user's browser profile directory based on browser info"""
-    import os
-    import glob
-    
     browser_type = browser_info['type']
     variant = browser_info['variant']
     
@@ -264,17 +257,21 @@ def find_browser_profile(browser_info):
     return None
 
 def start_firefox_with_profile():
-    """Start Firefox Developer Edition with your profile and remote debugging"""
-    import subprocess
-    import time
-    import os
-    
+    """Start Firefox Developer Edition with your profile and remote debugging
+
+    Profile path is determined by:
+    1. FIREFOX_PROFILE_PATH environment variable (if set)
+    2. Auto-detection via find_browser_profile()
+    """
     try:
-        # Kill any existing Firefox processes first
-        subprocess.run(['pkill', '-f', 'firefox'], capture_output=True)
-        time.sleep(2)
-        
-        profile_path = "/home/yaniv/.mozilla/firefox/ujm36p5s.dev-edition-default"
+        # Get profile path from environment or auto-detect
+        browser_info = get_default_browser()
+        profile_path = os.environ.get('FIREFOX_PROFILE_PATH') or find_browser_profile(browser_info)
+
+        if not profile_path or not os.path.exists(profile_path):
+            if DEBUG:
+                print("No valid Firefox profile found. Set FIREFOX_PROFILE_PATH environment variable.")
+            return None
         
         if DEBUG:
             print(f"Starting Firefox Developer Edition with profile: {profile_path}")
@@ -327,9 +324,9 @@ def setup_driver(headless=True):
     if DEBUG:
         print(f"Using browser: {browser_info['type']} {browser_info['variant']} ({browser_info['version']})")
         print(f"Executable: {browser_info['executable']}")
-    
-    # For testing: use specific profile directly
-    profile_path = "/home/yaniv/.mozilla/firefox/ujm36p5s.dev-edition-default"
+
+    # Get profile path from environment variable or auto-detect
+    profile_path = os.environ.get('FIREFOX_PROFILE_PATH') or find_browser_profile(browser_info)
     
     if browser_info['type'] == 'firefox':
         firefox_options = FirefoxOptions()
@@ -353,8 +350,6 @@ def setup_driver(headless=True):
                 firefox_options.add_argument("--new-instance")
                 
                 # Check if Firefox is already running with this profile
-                import subprocess
-                import os
                 try:
                     # Check for .parentlock file (Firefox creates this when using a profile)
                     parentlock_file = os.path.join(profile_path, '.parentlock')

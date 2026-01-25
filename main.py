@@ -48,22 +48,19 @@ def smart_load_data():
     else:
         return json_files, 'multiple_files'
 
-# Global variable to track analyzing status
-analyzing_status = {}
-
 def run_analyzer(username):
     """Run the LinkedIn analyzer in a background thread"""
     try:
         print(f"Starting analyzer for username: {username}")
-        
+
         analyzing_status[username] = {
             'status': 'running',
             'progress': 10,
             'message': 'Starting profile analysis...'
         }
-        
+
         # Run the analyzer
-        cmd = ['python', 'profile_analyzer.py', username, '--save', f'{username}.json']
+        cmd = ['python3', 'profile_analyzer.py', username, '--save', f'{username}.json']
         
         if DEBUG:
             print(f"Running command: {' '.join(cmd)}")

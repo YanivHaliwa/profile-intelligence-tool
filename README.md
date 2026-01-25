@@ -53,9 +53,56 @@ Formatted AI analysis → Flask templates → Soft blue web interface
 ## 🚀 Quick Start
 
 ## 🔑 Setup
-1. Set OpenAI API key: `export OPENAI_API_KEY='your-key-here'`
-2. Install dependencies: `pip install -r requirements.txt`
-3. Run application: `python3 main.py`
+1. Install dependencies: `pip install -r requirements.txt`
+2. Configure AI provider in `model_config.json`
+3. Set API key (if using OpenAI): `export OPENAI_API_KEY='your-key-here'`
+4. Run application: `python3 main.py`
+
+### 🤖 AI Provider Configuration
+
+Edit `model_config.json` to choose your AI provider:
+
+**OpenAI (default):**
+```json
+{
+    "active_provider": "openai",
+    "providers": {
+        "openai": {
+            "enabled": true,
+            "model": "gpt-4o",
+            "api_key_env": "OPENAI_API_KEY"
+        }
+    }
+}
+```
+
+**Ollama (local, free):**
+```json
+{
+    "active_provider": "ollama",
+    "providers": {
+        "ollama": {
+            "enabled": true,
+            "model": "llama3.2",
+            "base_url": "http://localhost:11434"
+        }
+    }
+}
+```
+
+**Ollama Setup:**
+```bash
+# Install Ollama
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# Pull a model (choose one)
+ollama pull llama3.2       # Good balance of speed/quality
+ollama pull mistral        # Fast, good for analysis
+ollama pull llama3.1:70b   # Best quality (needs 48GB+ RAM)
+
+# Start Ollama server
+ollama serve
+```
 
 ### 1. **Start the Web Application**
 ```bash
@@ -104,6 +151,36 @@ python3 main.py
 - OpenAI API key (for AI analysis)
 - Selenium WebDriver
 - BeautifulSoup4
+
+### 🔧 WebDriver Setup
+
+**Firefox (recommended):**
+```bash
+# Install geckodriver
+sudo apt install firefox-geckodriver
+# Or download from: https://github.com/mozilla/geckodriver/releases
+```
+
+**Chrome (alternative):**
+```bash
+# Install chromedriver
+sudo apt install chromium-chromedriver
+# Or download from: https://chromedriver.chromium.org/downloads
+```
+
+### 🔐 Browser Profile Requirement
+
+**IMPORTANT:** You must be logged into LinkedIn in your browser before running the analyzer.
+
+The tool auto-detects your browser profile with your LinkedIn session. To override:
+```bash
+export FIREFOX_PROFILE_PATH="/path/to/your/firefox/profile"
+```
+
+To find your Firefox profile path:
+```bash
+ls ~/.mozilla/firefox/*.default*
+```
 
 ---
 
