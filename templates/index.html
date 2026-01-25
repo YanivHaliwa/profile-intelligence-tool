@@ -170,10 +170,10 @@
         .spinner {
             display: none;
             margin: 0 auto 1rem;
-            width: 40px;
-            height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #0077b5;
+            width: 50px;
+            height: 50px;
+            border: 5px solid #e9ecef;
+            border-top: 5px solid #0077b5;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -181,6 +181,34 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .time-notice {
+            display: none;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #0077b5;
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .time-notice-icon {
+            font-size: 1.8rem;
+            color: #0077b5;
+            margin-bottom: 0.5rem;
+        }
+
+        .time-notice-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 0.3rem;
+        }
+
+        .time-notice-text {
+            font-size: 0.95rem;
+            color: #6c757d;
         }
 
         .test-btn {
@@ -260,7 +288,13 @@
         </a>
         
         <div class="spinner" id="spinner"></div>
-        
+
+        <div class="time-notice" id="timeNotice">
+            <div class="time-notice-icon"><i class="fas fa-clock"></i></div>
+            <div class="time-notice-title">Analysis in Progress</div>
+            <div class="time-notice-text">This may take 1-2 minutes while we gather profile data</div>
+        </div>
+
         <div class="progress-container" id="progressContainer">
             <div class="progress-bar">
                 <div class="progress-fill" id="progressFill"></div>
@@ -300,6 +334,7 @@
         const progressFill = document.getElementById('progressFill');
         const progressText = document.getElementById('progressText');
         const messageContainer = document.getElementById('messageContainer');
+        const timeNotice = document.getElementById('timeNotice');
 
         // Update LinkedIn URL preview as user types
         usernameInput.addEventListener('input', function() {
@@ -329,6 +364,7 @@
             searchBtn.disabled = true;
             searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
             spinner.style.display = 'block';
+            timeNotice.style.display = 'block';
             progressContainer.style.display = 'block';
             messageContainer.innerHTML = '';
 
@@ -399,6 +435,7 @@
             searchBtn.disabled = false;
             searchBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Profile';
             spinner.style.display = 'none';
+            timeNotice.style.display = 'none';
             progressContainer.style.display = 'none';
         }
     </script>

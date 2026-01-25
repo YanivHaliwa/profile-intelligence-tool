@@ -386,36 +386,58 @@ Please structure your response clearly with the 11 sections mentioned, starting 
 
 
 def analyze_profile(profile_text, config):
-    """Analyze profile using the configured AI provider"""
-    active = config.get('active_provider', 'openai')
+    """Analyze profile using enabled AI providers with fallback support.
+
+    Logic:
+    - Tries providers in order: openai, ollama
+    - Uses only enabled providers (enabled: true)
+    - If first provider fails, tries the next enabled one
+    """
     providers = config.get('providers', {})
 
-    provider_config = providers.get(active)
-    if not provider_config:
-        print(f"Error: Provider '{active}' not found in config")
+    # Get list of enabled providers in priority order
+    provider_order = ['openai', 'ollama']
+    enabled_providers = [p for p in provider_order if providers.get(p, {}).get('enabled', False)]
+
+    if not enabled_providers:
+        print("Error: No AI providers are enabled in model_config.json")
+        print("Set 'enabled': true for at least one provider")
         sys.exit(1)
 
-    if not provider_config.get('enabled', False):
-        print(f"Error: Provider '{active}' is disabled in config")
-        print("Edit model_config.json to enable it")
-        sys.exit(1)
+    last_error = None
 
-    model = provider_config.get('model', '')
+    for provider_name in enabled_providers:
+        provider_config = providers[provider_name]
+        model = provider_config.get('model', '')
 
-    if active == 'openai':
-        api_key = get_api_key(provider_config.get('api_key_env', 'OPENAI_API_KEY'))
-        print(f"🤖 Analyzing profile with OpenAI ({model})...")
-        return analyze_with_chatgpt(profile_text, api_key, model)
+        try:
+            if provider_name == 'openai':
+                api_key = get_api_key(provider_config.get('api_key_env', 'OPENAI_API_KEY'))
+                print(f"🤖 Analyzing profile with OpenAI ({model})...")
+                return analyze_with_chatgpt(profile_text, api_key, model)
 
-    elif active == 'ollama':
-        base_url = provider_config.get('base_url', 'http://localhost:11434')
-        print(f"🤖 Analyzing profile with Ollama ({model})...")
-        return analyze_with_ollama(profile_text, model, base_url)
+            elif provider_name == 'ollama':
+                base_url = provider_config.get('base_url', 'http://localhost:11434')
+                print(f"🤖 Analyzing profile with Ollama ({model})...")
+                return analyze_with_ollama(profile_text, model, base_url)
 
-    else:
-        print(f"Error: Unknown provider '{active}'")
-        print("Supported providers: openai, ollama")
-        sys.exit(1)
+        except SystemExit:
+            # Re-raise if this is the last provider
+            if provider_name == enabled_providers[-1]:
+                raise
+            # Otherwise try next provider
+            print(f"⚠️  {provider_name} failed, trying next provider...")
+            continue
+        except Exception as e:
+            last_error = str(e)
+            if provider_name == enabled_providers[-1]:
+                print(f"Error: All providers failed. Last error: {last_error}")
+                sys.exit(1)
+            print(f"⚠️  {provider_name} failed ({e}), trying next provider...")
+            continue
+
+    print("Error: All AI providers failed")
+    sys.exit(1)
 
 
 def get_api_key(env_var='OPENAI_API_KEY'):

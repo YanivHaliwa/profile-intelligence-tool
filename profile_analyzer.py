@@ -169,89 +169,146 @@ def get_default_browser():
     return {'type': 'firefox', 'variant': 'stable', 'executable': 'firefox', 'version': None}
 
 def find_browser_profile(browser_info):
-    """Find user's browser profile directory based on browser info"""
+    """Find user's browser profile directory based on browser info.
+
+    Uses smart scoring to find the best profile:
+    - Prefers profiles matching the browser variant (nightly, beta, dev-edition, etc.)
+    - Prefers profiles with session data (cookies.sqlite)
+    - Prefers recently modified profiles
+    """
     browser_type = browser_info['type']
-    variant = browser_info['variant']
-    
+    variant = browser_info['variant'] or ''
+
+    def score_firefox_profile(profile_path):
+        """Score a Firefox profile based on relevance and freshness."""
+        score = 0
+        profile_name = os.path.basename(profile_path).lower()
+
+        # Check if variant matches profile name
+        variant_keywords = {
+            'nightly': ['nightly'],
+            'developer': ['dev-edition', 'developer'],
+            'beta': ['beta'],
+            'esr': ['esr'],
+            'stable': ['default-release', 'default']
+        }
+        keywords = variant_keywords.get(variant, ['default'])
+        for keyword in keywords:
+            if keyword in profile_name:
+                score += 100  # Strong match for variant
+                break
+
+        # Has cookies = has session data
+        if os.path.exists(os.path.join(profile_path, 'cookies.sqlite')):
+            score += 50
+
+        # Has prefs.js = configured profile
+        if os.path.exists(os.path.join(profile_path, 'prefs.js')):
+            score += 20
+
+        # Recently modified = active profile
+        try:
+            mtime = os.path.getmtime(profile_path)
+            # Profiles modified in last 24h get bonus
+            if time.time() - mtime < 86400:
+                score += 30
+            elif time.time() - mtime < 604800:  # Last week
+                score += 10
+        except OSError:
+            pass
+
+        return score
+
     if browser_type == 'firefox':
-        # Firefox profile locations based on variant
-        if variant == 'developer':
-            profile_paths = [
-                os.path.expanduser("~/.mozilla/firefox-developer-edition/"),
-                os.path.expanduser("~/.mozilla/firefox/"),
-            ]
-            
-            # Look specifically for dev-edition-default profiles
-            base_path = os.path.expanduser("~/.mozilla/firefox/")
+        # All possible Firefox profile locations
+        firefox_dirs = [
+            os.path.expanduser("~/.mozilla/firefox/"),
+            os.path.expanduser("~/.mozilla/firefox-developer-edition/"),
+            os.path.expanduser("~/.mozilla/firefox-nightly/"),
+            os.path.expanduser("~/.mozilla/firefox-beta/"),
+            os.path.expanduser("~/snap/firefox/common/.mozilla/firefox/"),
+            os.path.expanduser("~/.var/app/org.mozilla.firefox/.mozilla/firefox/")
+        ]
+
+        all_profiles = []
+        for base_path in firefox_dirs:
             if os.path.exists(base_path):
-                dev_profiles = glob.glob(os.path.join(base_path, "*.dev-edition-default"))
-                if dev_profiles:
-                    if DEBUG:
-                        print(f"Found Firefox Developer Edition profile: {dev_profiles[0]}")
-                    return dev_profiles[0]
-        elif variant == 'nightly':
-            profile_paths = [
-                os.path.expanduser("~/.mozilla/firefox-nightly/"),
-                os.path.expanduser("~/.mozilla/firefox/"),
-            ]
-        elif variant == 'beta':
-            profile_paths = [
-                os.path.expanduser("~/.mozilla/firefox-beta/"),
-                os.path.expanduser("~/.mozilla/firefox/"),
-            ]
-        else:
-            profile_paths = [
-                os.path.expanduser("~/.mozilla/firefox/"),
-                os.path.expanduser("~/snap/firefox/common/.mozilla/firefox/"),
-                os.path.expanduser("~/.var/app/org.mozilla.firefox/.mozilla/firefox/")
-            ]
-        
-        for base_path in profile_paths:
-            if os.path.exists(base_path):
-                # Look for default profile
-                profiles = glob.glob(os.path.join(base_path, "*.default*"))
-                if profiles:
-                    if DEBUG:
-                        print(f"Found Firefox {variant} profile: {profiles[0]}")
-                    return profiles[0]
-    
+                # Find all profile directories (contain prefs.js or cookies.sqlite)
+                for item in os.listdir(base_path):
+                    item_path = os.path.join(base_path, item)
+                    if os.path.isdir(item_path):
+                        # Check if it looks like a profile
+                        if (os.path.exists(os.path.join(item_path, 'prefs.js')) or
+                            os.path.exists(os.path.join(item_path, 'cookies.sqlite'))):
+                            all_profiles.append(item_path)
+
+        if all_profiles:
+            # Score and sort profiles
+            scored_profiles = [(p, score_firefox_profile(p)) for p in all_profiles]
+            scored_profiles.sort(key=lambda x: x[1], reverse=True)
+
+            if DEBUG:
+                print(f"Firefox profiles found and scored:")
+                for p, s in scored_profiles[:5]:
+                    print(f"  {os.path.basename(p)}: {s}")
+
+            best_profile = scored_profiles[0][0]
+            if DEBUG:
+                print(f"Selected profile: {best_profile}")
+            return best_profile
+
     elif browser_type == 'chrome':
-        # Chrome profile locations based on variant
-        if variant == 'canary':
-            profile_paths = [
-                os.path.expanduser("~/.config/google-chrome-unstable/Default"),
-            ]
-        elif variant == 'beta':
-            profile_paths = [
-                os.path.expanduser("~/.config/google-chrome-beta/Default"),
-            ]
-        else:
-            profile_paths = [
-                os.path.expanduser("~/.config/google-chrome/Default"),
-                os.path.expanduser("~/.config/chromium/Default"),
-                os.path.expanduser("~/snap/chromium/common/chromium/Default")
-            ]
-        
-        for profile_path in profile_paths:
-            if os.path.exists(profile_path):
-                if DEBUG:
-                    print(f"Found Chrome {variant} profile: {profile_path}")
-                return profile_path
-    
+        # All possible Chrome profile locations
+        chrome_dirs = [
+            os.path.expanduser("~/.config/google-chrome/"),
+            os.path.expanduser("~/.config/google-chrome-unstable/"),  # Canary
+            os.path.expanduser("~/.config/google-chrome-beta/"),
+            os.path.expanduser("~/.config/chromium/"),
+            os.path.expanduser("~/snap/chromium/common/chromium/")
+        ]
+
+        # Variant to directory mapping
+        variant_dirs = {
+            'canary': 'google-chrome-unstable',
+            'beta': 'google-chrome-beta',
+            'stable': 'google-chrome'
+        }
+        preferred_dir = variant_dirs.get(variant, 'google-chrome')
+
+        # First try variant-specific directory
+        for base_path in chrome_dirs:
+            if preferred_dir in base_path and os.path.exists(base_path):
+                default_path = os.path.join(base_path, 'Default')
+                if os.path.exists(default_path):
+                    if DEBUG:
+                        print(f"Found Chrome {variant} profile: {default_path}")
+                    return default_path
+
+        # Fallback to any Chrome directory
+        for base_path in chrome_dirs:
+            if os.path.exists(base_path):
+                default_path = os.path.join(base_path, 'Default')
+                if os.path.exists(default_path):
+                    if DEBUG:
+                        print(f"Found Chrome profile: {default_path}")
+                    return default_path
+
     elif browser_type == 'brave':
         # Brave profile locations
-        profile_paths = [
-            os.path.expanduser("~/.config/BraveSoftware/Brave-Browser/Default"),
-            os.path.expanduser("~/.config/BraveSoftware/Brave-Browser-Dev/Default"),
-            os.path.expanduser("~/.config/BraveSoftware/Brave-Browser-Beta/Default"),
+        brave_dirs = [
+            os.path.expanduser("~/.config/BraveSoftware/Brave-Browser/"),
+            os.path.expanduser("~/.config/BraveSoftware/Brave-Browser-Dev/"),
+            os.path.expanduser("~/.config/BraveSoftware/Brave-Browser-Beta/"),
+            os.path.expanduser("~/.config/BraveSoftware/Brave-Browser-Nightly/"),
         ]
-        
-        for profile_path in profile_paths:
-            if os.path.exists(profile_path):
+
+        for base_path in brave_dirs:
+            default_path = os.path.join(base_path, 'Default')
+            if os.path.exists(default_path):
                 if DEBUG:
-                    print(f"Found Brave {variant} profile: {profile_path}")
-                return profile_path
-    
+                    print(f"Found Brave profile: {default_path}")
+                return default_path
+
     if DEBUG:
         print(f"No {browser_type} {variant} profile found")
     return None
@@ -358,10 +415,6 @@ def setup_driver(headless=True):
                             print("Firefox is already running with this profile (.parentlock exists) - using session copy method")
                         
                         # Copy essential session files to temp profile for headless
-                        import tempfile
-                        import shutil
-                        import os
-                        
                         temp_profile = tempfile.mkdtemp(prefix="firefox_headless_")
                         if DEBUG:
                             print(f"Created temp profile for headless: {temp_profile}")
@@ -403,7 +456,6 @@ def setup_driver(headless=True):
                 firefox_options.add_argument(profile_path)
             
             # Check if profile has existing session
-            import os
             prefs_file = os.path.join(profile_path, "prefs.js")
             if os.path.exists(prefs_file):
                 if DEBUG:
@@ -428,8 +480,7 @@ def setup_driver(headless=True):
                         '/opt/firefox-dev/firefox',
                         browser_info['executable']
                     ]
-                    
-                    import os
+
                     firefox_binary = None
                     for path in possible_paths:
                         if os.path.exists(path):
@@ -460,6 +511,16 @@ def setup_driver(headless=True):
                 print(f"Full error details: {str(e)}")
             raise Exception(f"Firefox WebDriver could not be started: {e}")
 
+
+def clean_name(name):
+    """Remove LinkedIn notification badges like (1), (99+), etc. from names"""
+    if not name:
+        return name
+    # Remove patterns like "(1) " or "(99+) " at the beginning of the name
+    cleaned = re.sub(r'^\(\d+\+?\)\s*', '', name)
+    return cleaned.strip()
+
+
 def extract_main_profile(soup):
     """Extract main profile information"""
     profile_data = {}
@@ -479,7 +540,8 @@ def extract_main_profile(soup):
         
         # Extract name from title or main profile heading
         if title_elem and " | LinkedIn" in title_elem.text:
-            profile_data['name'] = title_elem.text.replace(" | LinkedIn", "").strip()
+            raw_name = title_elem.text.replace(" | LinkedIn", "").strip()
+            profile_data['name'] = clean_name(raw_name)
             if DEBUG:
                 print(f"Found name from title: {profile_data['name']}")
         else:
@@ -502,7 +564,8 @@ def extract_main_profile(soup):
                         print(f"Found name with selector: {selector}")
                     break
             
-            profile_data['name'] = name_elem.text.strip() if name_elem else "Not available"
+            raw_name = name_elem.text.strip() if name_elem else "Not available"
+            profile_data['name'] = clean_name(raw_name)
         
         # Extract headline from spans containing the full headline text - improved to get real headline
         headline_text = None
