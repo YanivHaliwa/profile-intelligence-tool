@@ -60,27 +60,53 @@ Formatted AI analysis → Flask templates → Soft blue web interface
 
 ### 🤖 AI Provider Configuration
 
-Edit `model_config.json` to choose your AI provider:
+Edit `model_config.json` to choose your AI provider. Set `enabled: true` for providers you want to use. If multiple providers are enabled, OpenAI is tried first, then Ollama as fallback.
 
-**OpenAI (default):**
+**OpenAI only:**
 ```json
 {
-    "active_provider": "openai",
     "providers": {
         "openai": {
             "enabled": true,
             "model": "gpt-4o",
             "api_key_env": "OPENAI_API_KEY"
+        },
+        "ollama": {
+            "enabled": false,
+            "model": "llama3.2",
+            "base_url": "http://localhost:11434"
         }
     }
 }
 ```
 
-**Ollama (local, free):**
+**Ollama only (local, free):**
 ```json
 {
-    "active_provider": "ollama",
     "providers": {
+        "openai": {
+            "enabled": false,
+            "model": "gpt-4o",
+            "api_key_env": "OPENAI_API_KEY"
+        },
+        "ollama": {
+            "enabled": true,
+            "model": "llama3.2",
+            "base_url": "http://localhost:11434"
+        }
+    }
+}
+```
+
+**Both enabled (OpenAI first, Ollama fallback):**
+```json
+{
+    "providers": {
+        "openai": {
+            "enabled": true,
+            "model": "gpt-4o",
+            "api_key_env": "OPENAI_API_KEY"
+        },
         "ollama": {
             "enabled": true,
             "model": "llama3.2",

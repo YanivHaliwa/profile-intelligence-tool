@@ -467,91 +467,194 @@ def get_api_key(env_var='OPENAI_API_KEY'):
     return api_key
 
 def format_analysis_for_html(analysis_text):
-    """Format the analysis text for better HTML display with color-coded scores"""
-    
-    # Define score thresholds for color coding
-    score_thresholds = {
-        'Professional experience depth and relevance': 12.5,  # Half of 25
-        'Skills diversity and market demand': 10,  # Half of 20
-        'Profile completeness and presentation quality': 7.5,  # Half of 15
-        'Activity and thought leadership presence': 7.5,  # Half of 15
-        'Education and certifications value': 7.5,  # Half of 15
-        'Career trajectory and growth potential': 5  # Half of 10
-    }
-    
+    """Format the analysis text for better HTML display.
+
+    Converts markdown to HTML and applies styling for professional display.
+    Handles both OpenAI and Ollama output formats.
+    """
     import re
-    
-    lines = analysis_text.split('\n')
+
+    if not analysis_text:
+        return '<div class="analysis-error">No analysis content available</div>'
+
     html_parts = []
-    
-    # Find headline
-    headline = ''
+    lines = analysis_text.split('\n')
+    in_table = False
+    table_rows = []
+
     for line in lines:
-        if line.strip() and ('HEADLINE:' in line.upper() or line.strip().startswith('0.')):
-            headline = re.sub(r'^(0\.\s*)?HEADLINE:\s*', '', line.strip(), flags=re.IGNORECASE)
-            break
-    
-    if headline:
-        html_parts.append(f'<div class="analysis-headline">{headline}</div>')
-    
-    # Parse sections
-    current_section = None
-    current_content = []
-    in_summary = False
-    in_details = False
-    
-    for line in lines:
+        original_line = line
         line = line.strip()
+
         if not line:
+            if in_table and table_rows:
+                # Close table
+                html_parts.append(format_markdown_table(table_rows))
+                table_rows = []
+                in_table = False
+            html_parts.append('<br>')
             continue
-            
-        # Skip headline since we already processed it
-        if 'HEADLINE:' in line.upper() or line.startswith('0.'):
+
+        # Skip horizontal rules
+        if line.startswith('---') and len(line.replace('-', '').strip()) == 0:
+            html_parts.append('<hr class="section-divider">')
             continue
-            
-        # Check for section group markers
-        if 'SUMMARY SECTIONS' in line.upper() or line.upper() == '== SUMMARY ==':
-            if current_section and current_content:
-                html_parts.append(format_section_html(current_section, current_content, score_thresholds, in_summary))
-            html_parts.append('<div class="section-group-title">Summary</div>')
-            in_summary = True
-            in_details = False
-            current_section = None
-            current_content = []
+
+        # Handle markdown tables
+        if '|' in line and line.count('|') >= 2:
+            in_table = True
+            table_rows.append(line)
             continue
-            
-        if 'DETAILS SECTIONS' in line.upper() or line.upper() == '== DETAILS ==':
-            if current_section and current_content:
-                html_parts.append(format_section_html(current_section, current_content, score_thresholds, in_summary))
-            html_parts.append('<div class="section-group-title">Details</div>')
-            in_summary = False
-            in_details = True
-            current_section = None
-            current_content = []
+        elif in_table and table_rows:
+            # End of table
+            html_parts.append(format_markdown_table(table_rows))
+            table_rows = []
+            in_table = False
+
+        # Handle ## headers (markdown H2)
+        if line.startswith('## '):
+            title = line[3:].strip()
+            # Remove numbering like "2. " at the start
+            title = re.sub(r'^\d+\.\s*', '', title)
+            icon = get_section_icon(title)
+            html_parts.append(f'<div class="analysis-section-title"><i class="{icon}"></i> {title}</div>')
             continue
-        
-        # Check for numbered section headers
-        section_match = re.match(r'^(\d+)\.\s*([^:]+):\s*(.*)', line)
+
+        # Handle ### == SUMMARY == or ### == DETAILS == patterns
+        group_match = re.match(r'^#{1,3}\s*==\s*(.+?)\s*==\s*$', line)
+        if group_match:
+            group_title = group_match.group(1).strip()
+            html_parts.append(f'<div class="section-group-title">{group_title}</div>')
+            continue
+
+        # Handle **0. HEADLINE** or **1. OVERALL RATING** format
+        headline_match = re.match(r'^\*\*0\.\s*HEADLINE\*\*\s*$', line, re.IGNORECASE)
+        if headline_match:
+            continue  # Skip, headline content is on next line
+
+        # Handle headline content (italic line after **0. HEADLINE**)
+        if line.startswith('*') and line.endswith('*') and not line.startswith('**'):
+            headline_text = line.strip('*').strip()
+            html_parts.append(f'<div class="analysis-headline">{headline_text}</div>')
+            continue
+
+        # Handle **N. SECTION TITLE** format (bold numbered sections)
+        section_match = re.match(r'^\*\*(\d+)\.\s*(.+?)\*\*\s*$', line)
         if section_match:
-            # Save previous section
-            if current_section and current_content:
-                html_parts.append(format_section_html(current_section, current_content, score_thresholds, in_summary))
-            
-            # Start new section
-            current_section = section_match.group(2).strip()
-            current_content = []
-            
-            # Add content if present on same line
-            if section_match.group(3):
-                current_content.append(section_match.group(3).strip())
-        elif current_section and line:
-            current_content.append(line)
-    
-    # Add last section
-    if current_section and current_content:
-        html_parts.append(format_section_html(current_section, current_content, score_thresholds, in_summary))
-    
+            section_num = section_match.group(1)
+            section_title = section_match.group(2).strip()
+            icon = get_section_icon(section_title)
+            html_parts.append(f'<div class="analysis-section-title"><i class="{icon}"></i> {section_title}</div>')
+            continue
+
+        # Handle **N. SECTION: content** format (section with inline content)
+        section_content_match = re.match(r'^\*\*(\d+)\.\s*(.+?):\s*(.+?)\*\*\s*$', line)
+        if section_content_match:
+            section_title = section_content_match.group(2).strip()
+            content = section_content_match.group(3).strip()
+            icon = get_section_icon(section_title)
+            html_parts.append(f'<div class="analysis-section-title"><i class="{icon}"></i> {section_title}: <span class="highlight-score">{content}</span></div>')
+            continue
+
+        # Convert markdown formatting to HTML
+        formatted = convert_markdown_line(line)
+        html_parts.append(f'<div class="analysis-line">{formatted}</div>')
+
+    # Close any remaining table
+    if in_table and table_rows:
+        html_parts.append(format_markdown_table(table_rows))
+
     return ''.join(html_parts)
+
+
+def get_section_icon(title):
+    """Get Font Awesome icon for section title"""
+    title_upper = title.upper()
+    if 'RATING' in title_upper or 'SCORE' in title_upper:
+        return 'fas fa-chart-bar'
+    elif 'SUMMARY' in title_upper:
+        return 'fas fa-user-tie'
+    elif 'STRENGTH' in title_upper:
+        return 'fas fa-star'
+    elif 'TRAJECTORY' in title_upper or 'CAREER' in title_upper:
+        return 'fas fa-chart-line'
+    elif 'RECOMMENDATION' in title_upper:
+        return 'fas fa-lightbulb'
+    elif 'ACTIVITY' in title_upper or 'LEADERSHIP' in title_upper:
+        return 'fas fa-comments'
+    elif 'SKILL' in title_upper:
+        return 'fas fa-cogs'
+    elif 'PROJECT' in title_upper:
+        return 'fas fa-project-diagram'
+    elif 'CERTIFICATION' in title_upper:
+        return 'fas fa-certificate'
+    elif 'EDUCATION' in title_upper:
+        return 'fas fa-graduation-cap'
+    elif 'HEADLINE' in title_upper:
+        return 'fas fa-heading'
+    return 'fas fa-info-circle'
+
+
+def convert_markdown_line(line):
+    """Convert markdown formatting in a line to HTML"""
+    import re
+
+    # Bold: **text** -> <strong>text</strong>
+    line = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', line)
+
+    # Italic: *text* -> <em>text</em>
+    line = re.sub(r'\*(.+?)\*', r'<em>\1</em>', line)
+
+    # Bullet points: - text -> styled bullet
+    if line.startswith('- '):
+        line = f'<span class="bullet-point">•</span> {line[2:]}'
+
+    # Score highlighting: look for patterns like 20/25, 17/20, etc.
+    def color_score(match):
+        score = float(match.group(1))
+        max_score = float(match.group(2))
+        threshold = max_score / 2
+        color = '#28a745' if score > threshold else '#dc3545'
+        return f'<span style="color: {color}; font-weight: bold;">{int(score)}/{int(max_score)}</span>'
+
+    line = re.sub(r'\b(\d+(?:\.\d+)?)/(\d+)\b', color_score, line)
+
+    return line
+
+
+def format_markdown_table(rows):
+    """Convert markdown table rows to HTML table"""
+    import re
+
+    if len(rows) < 2:
+        return ''
+
+    html = ['<table class="analysis-table">']
+
+    for i, row in enumerate(rows):
+        # Skip separator rows (|---|---|)
+        if re.match(r'^\|[\s\-:|]+\|$', row):
+            continue
+
+        cells = [c.strip() for c in row.split('|')[1:-1]]  # Remove empty first/last
+
+        if i == 0:
+            # Header row
+            html.append('<thead><tr>')
+            for cell in cells:
+                cell = convert_markdown_line(cell)
+                html.append(f'<th>{cell}</th>')
+            html.append('</tr></thead><tbody>')
+        else:
+            # Data row
+            html.append('<tr>')
+            for cell in cells:
+                cell = convert_markdown_line(cell)
+                html.append(f'<td>{cell}</td>')
+            html.append('</tr>')
+
+    html.append('</tbody></table>')
+    return ''.join(html)
 
 def format_section_html(title, content_lines, score_thresholds, is_summary):
     """Format a single section as HTML"""

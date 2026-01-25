@@ -282,6 +282,83 @@
             padding: 1rem;
         }
 
+        /* New Analysis Styles for Markdown Output */
+        .analysis-section-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #2d3748;
+            padding: 0.8rem 1rem;
+            background: linear-gradient(135deg, #e1ecf4 0%, #f0f7fa 100%);
+            border-left: 4px solid #4a90a4;
+            margin: 1rem 0 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .analysis-section-title i {
+            color: #4a90a4;
+        }
+
+        .highlight-score {
+            color: #4a90a4;
+            font-weight: bold;
+        }
+
+        .section-divider {
+            border: none;
+            border-top: 2px solid #e2e8f0;
+            margin: 1rem 0;
+        }
+
+        .analysis-line {
+            padding: 0.3rem 1rem;
+            color: #4a5568;
+            line-height: 1.6;
+        }
+
+        .bullet-point {
+            color: #4a90a4;
+            font-weight: bold;
+            margin-right: 0.3rem;
+        }
+
+        .analysis-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .analysis-table th {
+            background: #4a90a4;
+            color: white;
+            padding: 0.8rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .analysis-table td {
+            padding: 0.8rem;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        .analysis-table tr:nth-child(even) {
+            background: #f7fafc;
+        }
+
+        .analysis-table tr:hover {
+            background: #edf2f7;
+        }
+
+        .analysis-error {
+            color: #dc3545;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 500;
+        }
+
         /* Main Content */
         .main-content {
             margin-top: 80px;
@@ -995,7 +1072,10 @@
             const popupBody = document.getElementById('popupBody');
             
             // If analysis is already HTML formatted (from new format_analysis_for_html function)
-            if (analysis.includes('<div class="analysis-headline">') || analysis.includes('<div class="analysis-section">')) {
+            if (analysis.includes('<div class="analysis-headline">') ||
+                analysis.includes('<div class="analysis-section">') ||
+                analysis.includes('<div class="analysis-section-title">') ||
+                analysis.includes('<table class="analysis-table">')) {
                 popupBody.innerHTML = `<div class="analysis-content">${analysis}</div>`;
                 return;
             }

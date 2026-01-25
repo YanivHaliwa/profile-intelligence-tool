@@ -17,15 +17,18 @@ app = Flask(__name__)
 analyzing_status = {}
 
 def get_json_files():
-    """Get all JSON files in the current directory"""
+    """Get all JSON files in the current directory (excluding config files)"""
     json_files = []
+    # Files to exclude from the browser (config files, not user profiles)
+    excluded_files = {'model_config.json', 'config.json', 'package.json', 'package-lock.json'}
+
     for file in glob.glob("*.json"):
-        if os.path.isfile(file):
+        if os.path.isfile(file) and file not in excluded_files:
             # Get file stats
             stats = os.stat(file)
             mod_time = datetime.fromtimestamp(stats.st_mtime)
             file_size = stats.st_size
-            
+
             json_files.append({
                 'filename': file,
                 'display_name': file.replace('.json', '').replace('-', ' ').title(),
