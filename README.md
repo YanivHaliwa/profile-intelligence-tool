@@ -24,7 +24,7 @@ A comprehensive LinkedIn profile analysis web application that reveals profile d
 ### Key Features:
 - **Modern Web Interface**: Clean, responsive design with soft blue color scheme
 - **Real-time Analysis**: Background processing with status updates
-- **AI Integration**: Seamless ChatGPT 4o-mini analysis with formatted results
+- **AI Integration**: OpenAI or Ollama analysis with formatted results
 - **Data Management**: JSON file handling and profile data presentation
 - **Multi-profile Support**: File browser for multiple analyzed profiles
 
@@ -42,7 +42,7 @@ main.py calls → profile_analyzer.py → Reveals LinkedIn data → Saves JSON
 
 ### 3. **AI Analysis** (`profile_ai_assistant.py`)
 ```
-User clicks "AI Analysis" → main.py calls → profile_ai_assistant.py → ChatGPT analysis
+User clicks "AI Analysis" → main.py calls → profile_ai_assistant.py → AI analysis (OpenAI or Ollama)
 ```
 
 ### 4. **Results Display** (`main.py`)
@@ -55,7 +55,9 @@ Formatted AI analysis → Flask templates → Soft blue web interface
 ## 🔑 Setup
 1. Install dependencies: `pip install -r requirements.txt`
 2. Configure AI provider in `model_config.json`
-3. Set API key (if using OpenAI): `export OPENAI_API_KEY='your-key-here'`
+3. Choose AI provider:
+   - OpenAI: `export OPENAI_API_KEY='your-key-here'`
+   - Ollama: install Ollama and pull a model (see **Ollama Setup** below)
 4. Run application: `python3 main.py`
 
 ### 🤖 AI Provider Configuration
@@ -68,7 +70,7 @@ Edit `model_config.json` to choose your AI provider. Set `enabled: true` for pro
     "providers": {
         "openai": {
             "enabled": true,
-            "model": "gpt-4o",
+            "model": "gpt-5.2",
             "api_key_env": "OPENAI_API_KEY"
         },
         "ollama": {
@@ -86,7 +88,7 @@ Edit `model_config.json` to choose your AI provider. Set `enabled: true` for pro
     "providers": {
         "openai": {
             "enabled": false,
-            "model": "gpt-4o",
+            "model": "gpt-5.2",
             "api_key_env": "OPENAI_API_KEY"
         },
         "ollama": {
@@ -104,7 +106,7 @@ Edit `model_config.json` to choose your AI provider. Set `enabled: true` for pro
     "providers": {
         "openai": {
             "enabled": true,
-            "model": "gpt-4o",
+            "model": "gpt-5.2",
             "api_key_env": "OPENAI_API_KEY"
         },
         "ollama": {
@@ -174,24 +176,21 @@ python3 main.py
 ## 📋 Requirements
 - Python 3.7+
 - Flask
-- OpenAI API key (for AI analysis)
+- OpenAI API key **or** Ollama (with a pulled model)
 - Selenium WebDriver
 - BeautifulSoup4
 
+## 🧭 Platform & Browser Support
+- **Linux-only** (uses Linux-specific profile paths and `xdg-settings`).
+- **Firefox required** for automated analysis (the code initializes **Firefox WebDriver only**).
+
 ### 🔧 WebDriver Setup
 
-**Firefox (recommended):**
+**Firefox (required):**
 ```bash
 # Install geckodriver
 sudo apt install firefox-geckodriver
 # Or download from: https://github.com/mozilla/geckodriver/releases
-```
-
-**Chrome (alternative):**
-```bash
-# Install chromedriver
-sudo apt install chromium-chromedriver
-# Or download from: https://chromedriver.chromium.org/downloads
 ```
 
 ### 🔐 Browser Profile Requirement
