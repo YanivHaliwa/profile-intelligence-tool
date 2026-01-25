@@ -1,0 +1,14 @@
+{
+    "providers": {
+        "openai": {
+            "enabled": false,
+            "model": "gpt-4o",
+            "api_key_env": "OPENAI_API_KEY"
+        },
+        "ollama": {
+            "enabled": true,
+            "model": "gpt-oss:120b-cloud",
+            "base_url": "http://localhost:11434"
+        }
+    }
+}
