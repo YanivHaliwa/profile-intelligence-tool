@@ -6,6 +6,7 @@ import json
 import re
 import subprocess
 import os
+import sys
 import glob
 import tempfile
 import shutil
@@ -44,6 +45,16 @@ def get_default_browser():
                     exec_line = re.search(r'Exec=([^\n]+)', content)
                     if exec_line:
                         executable = exec_line.group(1).split()[0]
+                        # Desktop file Exec= values are shell commands resolved via $PATH,
+                        # not filesystem paths. Selenium's binary_location needs a real path,
+                        # so resolve it. If it does not resolve, fall through to the
+                        # 'which' based scan below rather than returning a bare name.
+                        resolved = executable if os.path.isabs(executable) else shutil.which(executable)
+                        if not resolved:
+                            if DEBUG:
+                                print(f"Could not resolve '{executable}' from desktop file, falling back")
+                            raise ValueError(f"unresolvable executable: {executable}")
+                        executable = resolved
                         browser_info['executable'] = executable
                         if DEBUG:
                             print(f"Found executable from desktop file: {executable}")
@@ -499,8 +510,16 @@ def setup_driver(headless=True):
                     if DEBUG:
                         print(f"Using Firefox binary: {browser_info['executable']}")
             
-            # Try to start Firefox WebDriver (back to simple working version)
-            driver = webdriver.Firefox(options=firefox_options)
+            # Prefer an installed geckodriver over Selenium Manager's auto-download,
+            # which cannot resolve a driver when browser version detection fails.
+            geckodriver_path = shutil.which('geckodriver')
+            if geckodriver_path:
+                if DEBUG:
+                    print(f"Using geckodriver: {geckodriver_path}")
+                driver = webdriver.Firefox(options=firefox_options,
+                                           service=FirefoxService(executable_path=geckodriver_path))
+            else:
+                driver = webdriver.Firefox(options=firefox_options)
             if DEBUG:
                 print(f"Firefox {browser_info['variant']} WebDriver started successfully")
             return driver
@@ -2309,8 +2328,10 @@ def save_profile_data(profile_data, filename):
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(profile_data, f, indent=2, ensure_ascii=False)
         print(f"Profile data saved to {filename}")
+        return True
     except Exception as e:
         print(f"Error saving profile data: {e}")
+        return False
 
 def main():
     # Command line argument parsing
@@ -2341,10 +2362,14 @@ def main():
         
         # Save to file if requested
         if args.save:
-            save_profile_data(profile_data, args.save)
-        
+            if not save_profile_data(profile_data, args.save):
+                sys.exit(1)
+
     except Exception as e:
         print(f"An error occurred: {e}")
+        # Exit non-zero so callers (main.py) detect the failure instead of
+        # reporting a phantom success and redirecting to a missing results file.
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

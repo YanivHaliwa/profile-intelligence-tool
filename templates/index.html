@@ -380,7 +380,10 @@
             .then(data => {
                 if (data.success) {
                     showMessage(`Started analyzing: ${data.linkedin_url}`, 'success');
-                    pollStatus(username);
+                    // Poll using the server's cleaned username. The server strips '/', '@'
+                    // and lowercases before keying analyzing_status, so polling with the
+                    // raw input looks up a key that does not exist.
+                    pollStatus(data.username || username);
                 } else {
                     throw new Error(data.error || 'Failed to start analysis');
                 }
@@ -393,16 +396,24 @@
 
         function pollStatus(username) {
             const pollInterval = setInterval(() => {
-                fetch(`/status/${username}`)
-                .then(response => response.json())
+                fetch(`/status/${encodeURIComponent(username)}`)
+                .then(response => {
+                    // Without this check an HTML error page (404/500) reaches .json()
+                    // and surfaces as "JSON.parse: unexpected character", hiding the
+                    // real HTTP status.
+                    if (!response.ok) {
+                        throw new Error(`server returned HTTP ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     updateProgress(data.progress || 0, data.message || 'Processing...');
-                    
+
                     if (data.status === 'completed') {
                         clearInterval(pollInterval);
                         showMessage('Profile analyzed successfully!', 'success');
                         setTimeout(() => {
-                            window.location.href = `/results/${username}`;
+                            window.location.href = `/results/${encodeURIComponent(username)}`;
                         }, 1500);
                     } else if (data.status === 'error') {
                         clearInterval(pollInterval);
